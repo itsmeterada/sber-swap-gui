@@ -2,6 +2,8 @@
 
 SberSwap is a web application that performs face swapping between a source image (the face you want to use) and a target image (where you want to place the face).
 
+![image](webappwindow.png)
+
 ## Features
 
 - Browser-based user interface

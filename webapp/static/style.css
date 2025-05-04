@@ -1,0 +1,44 @@
+body { 
+    padding: 20px; 
+}
+
+.image-preview { 
+    max-width: 300px; 
+    margin: 10px; 
+    border: 2px dashed #ccc; 
+    padding: 10px; 
+}
+
+.result-image { 
+    max-width: 600px; 
+    margin: 20px auto; 
+}
+
+.upload-area { 
+    border: 2px dashed #ccc; 
+    padding: 20px; 
+    text-align: center; 
+    margin: 10px;
+    cursor: pointer;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-area:hover { 
+    background-color: #f8f9fa; 
+}
+
+#status { 
+    margin-top: 20px; 
+}
+
+.progress {
+    height: 30px;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}

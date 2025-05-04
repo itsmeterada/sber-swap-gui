@@ -1,0 +1,11 @@
+ailia
+flask
+flask-socketio
+werkzeug
+pillow
+opencv-python
+numpy
+python-socketio
+python-engineio
+requests
+tqdm

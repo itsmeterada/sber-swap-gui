@@ -5,6 +5,8 @@ A Windows GUI application for face swapping using the SberSwap face swapping tec
 
 There is a web version under webapp folder if you are using macos/Linux.
 
+The AI inference is done using [ailia SDK](https://github.com/axinc-ai/ailia-models).
+
 ![image](appwindow.png)
 
 ## Features

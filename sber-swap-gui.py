@@ -42,7 +42,7 @@ CROP_SIZE = 224
 IOU_DEFAULT = 0.4
 
 # Default paths
-MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp/models')
+MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
 
 # Make sure output directory exists
@@ -560,8 +560,7 @@ class SberSwapGUI(TkinterDnD.Tk):
         if missing_files:
             message = "The following model files are missing:\n\n"
             message += "\n".join(missing_files)
-            message += "\n\nPlease download them from https://storage.googleapis.com/ailia-models/sber-swap/ "
-            message += "and place them in the 'models' directory."
+            message += "\n\nPlease run 'python setup.py' to download the models."
             
             messagebox.showwarning("Missing Models", message)
     

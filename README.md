@@ -5,6 +5,8 @@ A Windows GUI application for face swapping using the SberSwap face swapping tec
 
 There is a web version under webapp folder if you are using macos/Linux.
 
+![image](appwindow.png)
+
 ## Features
 
 - Simple drag and drop interface

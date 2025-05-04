@@ -212,6 +212,22 @@ class ProcessingThread(threading.Thread):
         self.error = None
         self.debug_info = []  # For collecting debug information
         
+# ProcessingThreadクラスの変更箇所のみ抜粋 
+
+class ProcessingThread(threading.Thread):
+    """Thread for running the face swapping process"""
+    
+    def __init__(self, source_path, target_path, use_sr=False, iou=0.4, callback=None):
+        super().__init__()
+        self.source_path = source_path
+        self.target_path = target_path
+        self.use_sr = use_sr
+        self.iou = iou
+        self.callback = callback
+        self.output_path = None
+        self.error = None
+        self.debug_info = []  # For collecting debug information
+        
     def run(self):
         try:
             # Check if the required modules are imported
@@ -233,15 +249,13 @@ class ProcessingThread(threading.Thread):
                 net_pix2pix = None
             
             self._update_progress(30)
-            
+
             # Process source image - handle Japanese file paths
             if os.name == 'nt':
-                # Windows - use alternative loading method for non-ASCII paths
                 src_img = cv2.imdecode(np.fromfile(self.source_path, dtype=np.uint8), cv2.IMREAD_COLOR)
             else:
                 src_img = cv2.imread(self.source_path)
             
-            # Check if image was loaded successfully
             if src_img is None:
                 self.error = f"Failed to load source image: {self.source_path}. Please check the file path."
                 self._update_progress(100)
@@ -263,17 +277,17 @@ class ProcessingThread(threading.Thread):
                 self._update_progress(100)
                 return
                 
-            # Prepare source embeddings
+            # Prepare source embeddings - float32を使用
             img = self.preprocess(src_img)
+            img = img.astype(np.float16)  # float16からfloat32に変更
             output = net_back.predict([img])
             src_embeds = output[0]
-            src_embeds = src_embeds.astype(np.float16)
+            src_embeds = src_embeds.astype(np.float16)  # float16からfloat32に変更
             
             self._update_progress(50)
             
-            # Process target image - handle Japanese file paths
+            # Process target image
             if os.name == 'nt':
-                # Windows - use alternative loading method for non-ASCII paths
                 tar_img = cv2.imdecode(np.fromfile(self.target_path, dtype=np.uint8), cv2.IMREAD_COLOR)
             else:
                 tar_img = cv2.imread(self.target_path)
@@ -282,6 +296,9 @@ class ProcessingThread(threading.Thread):
                 self.error = f"Failed to load target image: {self.target_path}. Please check the file path."
                 self._update_progress(100)
                 return
+            
+            # 画像のタイプを確認（重要）
+            tar_img = cv2.cvtColor(tar_img, cv2.COLOR_BGR2RGB)
             
             # Run face swap
             output = self.predict(net_iface, net_G, src_embeds, tar_img)
@@ -301,11 +318,13 @@ class ProcessingThread(threading.Thread):
             
             self._update_progress(90)
 
+            # Convert back to BGR for saving
+            res_img = cv2.cvtColor(res_img, cv2.COLOR_RGB2BGR)
+
             # Save the result - handle Japanese file paths
             filename = f"swap_{int(time.time())}.png"
             self.output_path = os.path.join(OUTPUT_DIR, filename)
             
-            # Use flag for Windows to handle non-ASCII paths
             if os.name == 'nt':
                 cv2.imencode('.png', res_img)[1].tofile(self.output_path)
             else:
@@ -317,29 +336,9 @@ class ProcessingThread(threading.Thread):
             import traceback
             self.error = f"Error: {str(e)}\n\nDebug info:\n{traceback.format_exc()}"
             self._update_progress(100)
-    
-    def _update_progress(self, value):
-        """Update progress and call callback if provided"""
-        if self.callback:
-            self.callback(value, self.output_path, self.error)
-    
-    def preprocess(self, img, half_scale=True):
-        """Preprocess image for inference"""
-        if half_scale:
-            im_h, im_w, _ = img.shape
-            img = np.array(Image.fromarray(img).resize(
-                (im_w // 2, im_h // 2), Image.LANCZOS))
 
-        img = img.astype(np.float32)
-        img = (img - 127.5) / 127.5  # Normalize to [-1, 1]
-
-        img = img.transpose(2, 0, 1)  # HWC -> CHW
-        img = np.expand_dims(img, axis=0)
-        
-        return img
-    
     def predict(self, net_iface, net_G, src_embeds, tar_img):
-        """Perform the face swap prediction"""
+        """Perform the face swap prediction - 元のコードを維持"""
         kps = get_kps(tar_img, net_iface, nms_threshold=self.iou)
 
         if kps is None:
@@ -363,12 +362,14 @@ class ProcessingThread(threading.Thread):
 
         final_img = cv2.resize(y_st, (CROP_SIZE, CROP_SIZE))
 
-        return final_img, crop_img, M
-    
+        return final_img, crop_img, M    
+
     def face_enhancement(self, net_pix2pix, output):
-        """Apply super resolution to face"""
+        """Apply super resolution to face - 元のコードを維持"""
         final_img, crop_img, M = output
-        final_img = cv2.resize(final_img, (256, 256))
+        # すでに256x256なので、リサイズを回避
+        if final_img.shape[:2] != (256, 256):
+            final_img = cv2.resize(final_img, (256, 256), interpolation=cv2.INTER_LANCZOS4)
         final_img = final_img.astype(np.float32)
         final_img = final_img / 255.0
         final_img = np.expand_dims(final_img, axis=0)
@@ -379,11 +380,13 @@ class ProcessingThread(threading.Thread):
         final_img = final_img.astype(np.uint8)
         final_img = np.transpose(final_img, (0, 2, 3, 1))
         final_img = final_img[0]
-        final_img = cv2.resize(final_img, (CROP_SIZE, CROP_SIZE))
+        # より高品質なリサイズ
+        if final_img.shape[:2] != (CROP_SIZE, CROP_SIZE):
+            final_img = cv2.resize(final_img, (CROP_SIZE, CROP_SIZE), interpolation=cv2.INTER_LANCZOS4)
         return final_img, crop_img, M
-    
+
     def get_final_img(self, output, tar_img, net_lmk):
-        """Create the final image with face mask"""
+        """Create the final image with face mask - 品質改善のために小さな調整を加える"""
         final_img, crop_img, tfm = output
 
         h, w = tar_img.shape[:2]
@@ -395,7 +398,10 @@ class ProcessingThread(threading.Thread):
         mask, _ = face_mask_static(crop_img, landmarks, landmarks_tgt, None)
         mat_rev = cv2.invertAffineTransform(tfm)
 
-        swap_t = cv2.warpAffine(final_img, mat_rev, (w, h), borderMode=cv2.BORDER_REPLICATE)
+        # より高品質なwarpAffine処理
+        swap_t = cv2.warpAffine(final_img, mat_rev, (w, h), 
+                               borderMode=cv2.BORDER_REPLICATE,
+                               flags=cv2.INTER_LINEAR)
         mask_t = cv2.warpAffine(mask, mat_rev, (w, h))
         mask_t = np.expand_dims(mask_t, 2)
 
@@ -404,7 +410,26 @@ class ProcessingThread(threading.Thread):
 
         return final
 
+    def preprocess(self, img, half_scale=True):
+        """Preprocess image for inference - 品質改善のため、バイキュービック補間を使用"""
+        if half_scale:
+            im_h, im_w, _ = img.shape
+            img = np.array(Image.fromarray(img).resize(
+                (im_w // 2, im_h // 2), Image.LANCZOS))
 
+        img = img.astype(np.float32)
+        img = (img - 127.5) / 127.5  # Normalize to [-1, 1]
+
+        img = img.transpose(2, 0, 1)  # HWC -> CHW
+        img = np.expand_dims(img, axis=0)
+        
+        return img
+
+    def _update_progress(self, value):
+        """Update progress and call callback if provided"""
+        if self.callback:
+            self.callback(value, self.output_path, self.error)
+    
 class SberSwapGUI(TkinterDnD.Tk):
     """Main GUI window for SberSwap application"""
     

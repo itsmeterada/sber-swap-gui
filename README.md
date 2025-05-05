@@ -15,7 +15,7 @@ The AI inference is done using [ailia SDK](https://github.com/axinc-ai/ailia-mod
 - Simple drag and drop interface
 - Swap faces in images
 - Super resolution enhancement option for source face image
-- Support for both Ailia and ONNX runtime
+- Support for both ailia SDK and ONNX runtime(see the original [repo](https://github.com/axinc-ai/ailia-models/tree/master/face_swapping/sber-swap) for the implementation)
 - Adjustable IOU threshold for face detection
 
 ## Requirements

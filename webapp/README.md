@@ -17,7 +17,7 @@ SberSwap is a web application that performs face swapping between a source image
 
 - Python 3.7 or higher
 - Required Python packages (listed in requirements.txt)
-- At least 2GB of RAM (for model loading)
+- At least 4GB of RAM (for model loading)
 
 ## Installation
 
@@ -138,7 +138,7 @@ This project is released under the MIT License.
 
 ## Credits
 
-- AILIA SDK for model inference
+- [ailia SDK](https://github.com/axinc-ai/ailia-models) for model inference
 - Flask framework for web interface
 
 ## Support
